@@ -149,7 +149,7 @@ Engine code is separated from presentation: `src/ingestion` (data), `src/feature
 
 ```bash
 # 1. Clone
-git clone https://github.com/<your-username>/vayu.git
+git clone https://github.com/AdyaSinha1/vayu.git
 cd vayu
 
 # 2. Environment (Python 3.10+)
@@ -188,7 +188,7 @@ Per hackathon rules: AI assistants were used for ideation, scaffolding and engin
 | **Team** | VAYU |
 | **Members** | Adya Sinha |
 | **Track** | Green Planet — GP-01: Air Quality Monitoring & Source Attribution |
-| **Live demo** | *(add Streamlit Community Cloud URL after deployment)* |
+| **Live demo** | [jdkt8afz6w5zaibv75ehwe.streamlit.app](https://jdkt8afz6w5zaibv75ehwe.streamlit.app/) |
 
 ---
 
