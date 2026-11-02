@@ -1,0 +1,19 @@
+# Environments
+.venv/
+venv/
+env/
+
+# Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Large raw archives (re-fetch with: python src/ingestion/download_cpcb_delhi.py)
+data/raw/latest-air-quality.parquet
+data/raw/firms_punjab_haryana.csv
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,87 @@
+{
+  "n_samples": 16892,
+  "reconstruction_residual": 0.0751,
+  "diagnostic_medians": {
+    "pm_ratio": 0.681,
+    "no2_so2_ratio": 4.311,
+    "co_no2_ratio": 35.577
+  },
+  "shares": {
+    "Vehicular Fleet Exhaust": 29.32,
+    "Agricultural Biomass / Stubble Burning": 24.92,
+    "Crustal & Resuspended Dust": 13.58,
+    "Industrial & Thermal Combustion": 32.19
+  },
+  "bootstrap": {
+    "Vehicular Fleet Exhaust": {
+      "mean": 29.32,
+      "ci90_low": null,
+      "ci90_high": null,
+      "sigma": null,
+      "n_boot_ok": 20
+    },
+    "Agricultural Biomass / Stubble Burning": {
+      "mean": 24.92,
+      "ci90_low": null,
+      "ci90_high": null,
+      "sigma": null,
+      "n_boot_ok": 20
+    },
+    "Crustal & Resuspended Dust": {
+      "mean": 13.58,
+      "ci90_low": null,
+      "ci90_high": null,
+      "sigma": null,
+      "n_boot_ok": 20
+    },
+    "Industrial & Thermal Combustion": {
+      "mean": 32.19,
+      "ci90_low": null,
+      "ci90_high": null,
+      "sigma": null,
+      "n_boot_ok": 20
+    }
+  },
+  "profiles": {
+    "Vehicular Fleet Exhaust": {
+      "pm25": 0.266,
+      "pm10": 0.3935,
+      "no2": 0.22,
+      "so2": 0.0309,
+      "co": 0.0028,
+      "ozone": 0.0868
+    },
+    "Agricultural Biomass / Stubble Burning": {
+      "pm25": 0.5941,
+      "pm10": 0.3995,
+      "no2": 0.0,
+      "so2": 0.003,
+      "co": 0.0033,
+      "ozone": 0.0
+    },
+    "Crustal & Resuspended Dust": {
+      "pm25": 0.0985,
+      "pm10": 0.7267,
+      "no2": 0.1291,
+      "so2": 0.0415,
+      "co": 0.0043,
+      "ozone": 0.0
+    },
+    "Industrial & Thermal Combustion": {
+      "pm25": 0.3611,
+      "pm10": 0.5762,
+      "no2": 0.0267,
+      "so2": 0.0147,
+      "co": 0.003,
+      "ozone": 0.0182
+    }
+  },
+  "features_used": [
+    "pm25",
+    "pm10",
+    "no2",
+    "so2",
+    "co",
+    "ozone"
+  ]
+}

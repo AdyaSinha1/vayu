@@ -1,0 +1,9 @@
+streamlit>=1.45.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+pyarrow>=14.0.0
+plotly>=6.0.0
+scipy>=1.11.0
+requests>=2.31.0
+# optional: shap (not installable on Python 3.14 yet - app falls back to permutation importance)
