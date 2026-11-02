@@ -516,7 +516,11 @@ with t2:
 
     st.markdown("#### Factor profiles (fraction of each pollutant carried by each factor)")
     prof_df = pd.DataFrame(attribution["profiles"]).T
-    st.dataframe(prof_df.style.format("{:.3f}").background_gradient(cmap="PuBu", axis=None), width="stretch", height=190)
+    try:  # optional matplotlib gradient; plain table if unavailable (e.g. cloud)
+        styled = prof_df.style.format("{:.3f}").background_gradient(cmap="PuBu", axis=None)
+        st.dataframe(styled, width="stretch", height=190)
+    except (ImportError, ModuleNotFoundError):
+        st.dataframe(prof_df.round(3), width="stretch", height=190)
 
     med = attribution["diagnostic_medians"]
     _m = lambda key, d=0.0: med[key] if med.get(key) is not None else d
