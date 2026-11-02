@@ -4,7 +4,7 @@
 
 **Atmospheric intelligence for Delhi-NCR — source attribution, probabilistic forecasting and policy simulation on open public data.**
 
-[![tests](https://github.com/USERNAME/vayu/actions/workflows/tests.yml/badge.svg)](https://github.com/USERNAME/vayu/actions/workflows/tests.yml)
+[![tests](https://github.com/AdyaSinha1/vayu/actions/workflows/tests.yml/badge.svg)](https://github.com/AdyaSinha1/vayu/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.10%2B-35616A)
 ![license](https://img.shields.io/badge/license-MIT-A6B9A3)
 
