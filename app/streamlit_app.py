@@ -112,6 +112,9 @@ st.markdown(f"""
     .stTabs [data-baseweb="tab"] {{ border-radius: 0; color: {TEXT_2}; font-weight: 600; padding: 9px 16px; border: none !important; font-size: 0.85rem; }}
     .stTabs [aria-selected="true"] {{ color: {SAND} !important; border-bottom: 2px solid {SAND} !important; background: transparent !important; }}
     [data-testid="stSidebar"] {{ background: #101B21 !important; border-right: 1px solid rgba(111,163,174,0.25); }}
+    [data-testid="stToolbar"] {{ display: none; }}
+    [data-testid="stStatusWidget"] {{ display: none; }}
+    .stDeployButton {{ display: none; }}
     [data-testid="stSidebar"] .stSelectbox label, [data-testid="stSidebar"] .stRadio label {{ color: {TEXT_2}; font-size: 0.78rem; }}
     .stButton button, [data-testid="stDownloadButton"] button {{
         background: {SAND} !important; color: {INK} !important; border: none !important;

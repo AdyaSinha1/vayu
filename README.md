@@ -1,129 +1,197 @@
-# VAYU: Atmospheric Intelligence & Explainable Source Attribution System
-**NEURAL STORM 2026 — Track: Green Planet | Problem Statement: GP-01**
+<div align="center">
 
-> **Tagline:** *Understand the air. Trace the source. Quantify the uncertainty.*
+# VAYU.
 
----
+**Atmospheric intelligence for Delhi-NCR — source attribution, probabilistic forecasting and policy simulation on open public data.**
 
-## 📌 1. Project Overview & Problem Statement
-* **Track:** Green Planet
-* **Problem Statement:** GP-01 — Air Quality Monitoring & Source Attribution
-* **Target Region:** Indo-Gangetic Plain & Delhi-NCR Smog Belt
+[![tests](https://github.com/USERNAME/vayu/actions/workflows/tests.yml/badge.svg)](https://github.com/USERNAME/vayu/actions/workflows/tests.yml)
+![python](https://img.shields.io/badge/python-3.10%2B-35616A)
+![license](https://img.shields.io/badge/license-MIT-A6B9A3)
 
-### The Challenge
-Every winter, the Indo-Gangetic Plain suffers from a hazardous toxic smog crisis. While standard monitoring systems report high PM2.5 values, **they fail to answer critical governance questions**:
-1. *Who is contributing to this pollution?* (Vehicular fleet vs. transboundary stubble burning vs. industrial combustion vs. road dust).
-2. *Is a spike caused by higher emissions or by thermal inversion?* (Planetary Boundary Layer collapse trapping normal emissions).
-3. *What happens if specific interventions are implemented?*
+*Understand the air. Trace the source. Quantify the uncertainty.*
 
-### The VAYU Solution
-**VAYU** is an explainable atmospheric intelligence platform built on **100% real, open data** — CPCB CAAQMS continuous telemetry (26,895 records, 40 Delhi-NCR stations) + Open-Meteo ERA5 reanalysis (real boundary-layer height and wind vectors). Rather than merely forecasting a scalar AQI value, VAYU implements:
-* **Dual-Engine Source Attribution**: chemical diagnostic fingerprinting + unsupervised **Positive Matrix Factorization (NMF)** extracting emission profiles with **bootstrap credible intervals** — no fabricated labels.
-* **Quantile (probabilistic) forecasting** evaluated **strictly out-of-time**, always compared against a persistence baseline — including where the baseline wins.
-* **Inversion-vs-emission decoupling**: permutation importance separates meteorological trapping from emission signal.
-* **Counterfactual "What-If" policy simulator** (documented first-order linear model) with illustrative response-stage presets.
-* **CPCB AQI sub-index computation** (official 2014 breakpoints with linear interpolation) per station and city-wide, with the driving pollutant reported.
-* **Printable situation reports** — self-contained HTML (open and Ctrl+P to PDF) or Markdown, generated from the live engine state, plus CSV export of the modelling table.
-* **Honest failure reporting**: when data is unavailable (e.g. NASA FIRMS without an API key, Open-Meteo outage), the UI says "unavailable" — it never fabricates.
+</div>
 
 ---
 
-## 🔬 2. Scientific & Mathematical Methodology
+## Contents
+1. [Problem](#1-problem)
+2. [What VAYU does](#2-what-vayu-does)
+3. [Screenshots](#3-screenshots)
+4. [Methodology](#4-methodology)
+5. [Results (measured, not asserted)](#5-results-measured-not-asserted)
+6. [Architecture](#6-architecture)
+7. [Tech stack and data sources](#7-tech-stack-and-data-sources)
+8. [Setup and running](#8-setup-and-running)
+9. [Limitations and intended use](#9-limitations-and-intended-use)
+10. [AI tools used](#10-ai-tools-used)
+11. [Team](#11-team)
 
-### A. Chemical Diagnostic Ratios (Fingerprinting)
-1. **Aerodynamic Combustion Ratio**: $R_{aero} = \frac{[PM_{2.5}]}{[PM_{10}]}$
-   * $> 0.65$: fine combustion aerosols (vehicles, biomass). **Observed real Delhi median: 0.68**.
-   * $< 0.40$: coarse crustal dust, road resuspension.
-2. **Mobile vs. Stationary Signature**: $R_{ind} = \frac{[NO_2]}{[SO_2]}$
-   * $> 2.5$: mobile fleet (BS-VI ultra-low-sulfur). **Observed real Delhi median: 4.31**.
-   * $< 1.0$: sulfur-heavy coal/industrial combustion.
-3. **Smoldering tracer**: $CO/NO_2 \times 1000$, observed real median **35.6**.
+---
 
-### B. Positive Matrix Factorization (Receptor Modeling via NMF)
-For the multi-pollutant matrix $X \in \mathbb{R}^{n \times m}$ (PM2.5, PM10, NO2, SO2, CO, O3):
-$$\min_{W \ge 0,\, H \ge 0} \tfrac{1}{2}\|X - WH\|_F^2 + \alpha\|W\|_1 + \beta\|H\|_1$$
-Fitted on **16,892 real multi-pollutant samples** (relative reconstruction residual **0.075**). Source shares below are **means over 150 bootstrap refits**; intervals are empirical 90% credible intervals (5th–95th percentile of bootstrap shares):
+## 1. Problem
+
+Every winter the Indo-Gangetic Plain experiences hazardous smog episodes, and Delhi-NCR sits at its centre. Standard dashboards report **what** the concentration is, but not three questions that actually matter for public health response and governance:
+
+1. **Where is the PM2.5 coming from?** Vehicular exhaust, industrial combustion, agricultural biomass burning and dust coexist in the same air; a single number cannot separate them.
+2. **Is a spike caused by more emissions, or by the atmosphere trapping normal emissions?** When the planetary boundary layer collapses to ~150 m at night in winter, pollution rises with no change in human activity. Confusing the two leads to the wrong policy response.
+3. **What happens if a specific intervention is applied?** Regulators need to compare the expected effect of traffic restrictions vs. dust control *before* enforcement.
+
+Ground sensors cannot answer these directly: they measure pollutant mass, not source labels. Supervised classifiers trained on invented "source" labels are scientifically meaningless — VAYU takes the unsupervised, uncertainty-quantified route instead.
+
+## 2. What VAYU does
+
+- **Source attribution** — a non-negative matrix factorization receptor model (the same mathematical form as the US EPA's PMF5) decomposes multi-pollutant chemistry into four factors (traffic, industry, biomass burning, dust), with **bootstrap credible intervals** on every share.
+- **Inversion vs. emission decoupling** — permutation importance on a strictly out-of-time test split separates *meteorological trapping* (boundary-layer height, calm winds) from *emission and persistence* signals.
+- **Probabilistic forecasting** — gradient-boosted quantile regression (pinball loss, τ = 0.10/0.50/0.90) at +1/24/48/72 h horizons, evaluated strictly chronologically and always benchmarked against a persistence baseline — including where the baseline wins.
+- **Policy simulator** — a first-order counterfactual engine with illustrative response-stage presets for comparing intervention sizes.
+- **CPCB AQI computation** — official 2014 sub-index breakpoints, per station and city-wide, with the driving pollutant reported.
+- **Situation reports** — print-ready HTML/Markdown reports generated from live engine state; CSV export of the modelling table.
+- **Honest failure reporting** — when a dataset is unavailable (e.g. NASA FIRMS without an API key, a weather-API outage), the UI says *unavailable*. It never fabricates values.
+
+## 3. Screenshots
+
+| Overview — hotspots, AQI, boundary layer | Source attribution — NMF with bootstrap CIs |
+|---|---|
+| ![Overview](docs/screenshots/01_overview.png) | ![Attribution](docs/screenshots/02_source_attribution.png) |
+
+| Drivers — inversion vs. emissions | Forecast — quantile fan chart |
+|---|---|
+| ![Drivers](docs/screenshots/03_drivers.png) | ![Forecast](docs/screenshots/04_forecast.png) |
+
+| Policy simulator | Model audit — out-of-time metrics |
+|---|---|
+| ![Simulator](docs/screenshots/05_policy_simulator.png) | ![Audit](docs/screenshots/06_model_audit.png) |
+
+| Method and data |
+|---|
+| ![Method](docs/screenshots/07_method_and_data.png) |
+
+## 4. Methodology
+
+### Chemical fingerprinting
+Diagnostic ratios characterise the pollution regime:
+
+$$R_{aero} = \frac{[PM_{2.5}]}{[PM_{10}]}, \qquad R_{ind} = \frac{[NO_2]}{[SO_2]}, \qquad R_{comb} = \frac{[CO]\times 1000}{[NO_2]}$$
+
+Fine-aerosol dominance (R_aero > 0.65) indicates combustion; a high NO2/SO2 ratio (> 2.5) indicates a low-sulphur vehicular fleet; elevated CO relative to NO2 marks smoldering biomass. **Measured real medians on this dataset: 0.68, 4.31, 35.6.**
+
+### Receptor model (source attribution)
+$$\min_{W \ge 0,\; H \ge 0} \; \tfrac{1}{2}\lVert X - WH \rVert_F^2 + \alpha \lVert W \rVert_1 + \beta \lVert H \rVert_1$$
+
+X (hours × pollutants) decomposes into temporal factors W and source profiles H. Shares are averaged over **150 bootstrap refits**; credible intervals are the empirical 5th–95th percentiles. Factor naming uses documented chemical markers and is disclosed as a heuristic in the UI.
+
+### Quantile forecasting
+$$L_\tau(y, \hat{y}) = \max\left(\tau\,(y-\hat{y}),\; (\tau-1)(y-\hat{y})\right), \quad \tau \in \{0.10, 0.50, 0.90\}$$
+
+Direct multi-horizon gradient-boosted models use only information available at forecast time (lags, rolling means, chemical ratios, onboard met sensors, ERA5 boundary-layer height and u/v winds). Splits are strictly chronological; quantile crossing is corrected by sorting.
+
+### Driver separation
+Permutation importance on the out-of-time test split (pinball scorer at the median), grouped into *meteorological dispersal*, *emission signature* and *persistence history*.
+
+## 5. Results (measured, not asserted)
+
+**Attribution** — NMF on 16,892 real samples; relative reconstruction residual 0.075; shares from 150 bootstrap refits:
 
 | Source (heuristic assignment) | Share | 90% CI |
 |---|---|---|
-| Industrial & Thermal Combustion | 32.4% | [29.8, 33.8] |
-| Vehicular Fleet Exhaust | 30.0% | [28.5, 37.9] |
-| Agricultural Biomass / Stubble Burning | 24.2% | [21.3, 25.7] |
-| Crustal & Resuspended Dust | 13.4% | [10.8, 14.1] |
+| Industrial & thermal combustion | 32.4% | [29.8, 33.8] |
+| Vehicular fleet exhaust | 30.0% | [28.5, 37.9] |
+| Agricultural biomass / stubble burning | 24.2% | [21.3, 25.7] |
+| Crustal & resuspended dust | 13.4% | [10.8, 14.1] |
 
-> **Honesty note:** NMF factors are statistical constructs; the mapping of factors to physical source names is a **documented chemical-marker heuristic** (NO2/benzene→vehicular, SO2→industrial, CO→biomass, coarse PM10→dust), shown in the UI. Shares are evidence scores with uncertainty — not probabilities, not measured truth.
+**Forecasting** — 169 hourly city-aggregate rows (2025-12-24 → 12-31 UTC, 40 stations); chronological 75/25 split; persistence = "predict last observed PM2.5":
 
-### C. Quantile (Pinball-Loss) Forecasting
-$$L_\tau(y, \hat y) = \max\big(\tau (y-\hat y),\, (\tau-1)(y-\hat y)\big), \quad \tau \in \{0.10, 0.50, 0.90\}$$
-Direct multi-horizon models (HistGradientBoosting, quantile loss) predict PM2.5 at +1/24/48/72 h from features known at forecast time (lags, rolling means, chemical ratios, CPCB onboard met sensors, ERA5 BLH + u/v winds). Quantile crossing is corrected by sorting; the forecast origin is always the latest real observation.
+| Horizon | Model MAE | Persistence MAE | Beats baseline | R² | 80% coverage |
+|---|---|---|---|---|---|
+| +1 h | **16.8 µg/m³** | 20.8 | yes | **0.865** | 0.33 |
+| +24 h | **43.1 µg/m³** | 64.9 | yes | 0.225 | 0.30 |
+| +48 h | 42.1 µg/m³ | 35.7 | **no — persistence wins** | 0.271 | 0.61 |
+| +72 h | 40.9 µg/m³ | 38.9 | **no — persistence wins** | 0.292 | 0.48 |
 
-### D. Inversion-vs-Emission Decoupling
-Permutation importance on the out-of-time test split (pinball scorer at τ=0.5), grouped into *Meteorological dispersal* / *Emission signature* / *Persistence history*. On this real window the 24h horizon is **meteorological-trapping dominant (74%)** while the 1h nowcast is **emission-signal dominant (86%)** — reported per run, not asserted.
+> **Honest reading:** VAYU clearly beats persistence at nowcast and day-ahead ranges; at +48/+72 h on this short window persistence is competitive — reported as measured. Observed interval coverage is below nominal (intervals too narrow at ~7 days of data), and the audit tab states this. Each horizon is scored on ~25–42 out-of-time hourly points: indicative, not definitive.
 
----
+**Driver separation (this window):** the 24 h horizon is meteorological-trapping dominant (74%), while the 1 h nowcast is emission-signal dominant (86%).
 
-## 💻 3. Tech Stack & Open Data
-* **Language:** Python 3.10+ (developed on 3.14)
-* **Real open data:**
-  * CPCB CAAQMS continuous telemetry via the open mirror `Vonter/india-cpcb-aqi` (26,895 Delhi records, 40 stations, 15-min cadence)
-  * Open-Meteo ERA5 archive API (temperature, RH, wind speed/direction, surface pressure, **boundary layer height**) with a local parquet cache and provenance reporting
-  * NASA FIRMS VIIRS active fires (optional: set `FIRMS_MAP_KEY`; without it VAYU reports "unavailable" instead of faking fire data)
-* **ML:** scikit-learn (NMF, HistGradientBoosting quantile regressors, permutation importance)
-* **Data:** pandas, NumPy, pyarrow; **Viz/UI:** Streamlit, Plotly (MapLibre dark matter basemap)
-* **Tests:** pytest (39 tests: ratio math, AQI breakpoints, NMF constraints, quantile monotonicity, no-leakage split, simulator bounds)
+**Test suite:** 39 pytest tests covering AQI breakpoints, ratio edge cases, NMF constraints, quantile monotonicity, chronological-split leakage checks and simulator bounds.
 
----
+## 6. Architecture
 
-## 🚀 4. How to Run Locally
+```mermaid
+flowchart LR
+    A[CPCB CAAQMS telemetry\n40 Delhi stations] --> C[Feature pipeline\nhourly aggregate, lags, ratios]
+    B[Open-Meteo ERA5\nBLH + u/v winds, cached] --> C
+    C --> D[NMF receptor model\n+ 150 bootstrap refits]
+    C --> E[Quantile forecaster\n+/-1/24/48/72 h, pinball loss]
+    C --> F[Permutation importance\nmet vs emission decoupling]
+    D --> G[Streamlit console\nmaps, attribution, simulator,\naudit, reports]
+    E --> G
+    F --> G
+    H[NASA FIRMS fires\noptional key] -.-> G
+```
+
+Engine code is separated from presentation: `src/ingestion` (data), `src/features` (pipeline + AQI), `src/models` (forecaster + explainer), `src/attribution` (NMF + simulator), `src/reports` (document generation). Every figure shown in the UI is computed live from these modules — nothing is hard-coded.
+
+## 7. Tech stack and data sources
+
+- **Python 3.10+** · pandas · NumPy · scikit-learn (NMF, HistGradientBoosting, permutation importance) · pyarrow
+- **Streamlit** + **Plotly** (MapLibre dark basemap) for the console
+- **pytest** for the test suite · **GitHub Actions** CI (Python 3.12/3.13)
+
+| Data | Source | Notes |
+|---|---|---|
+| Ground telemetry | CPCB CAAQMS via open mirror `Vonter/india-cpcb-aqi` | 26,895 records, 40 Delhi-NCR stations, 15-min cadence |
+| Meteorology | Open-Meteo ERA5 archive API | hourly BLH, winds, T/RH/pressure; local cache; provenance shown in UI |
+| Active fires | NASA FIRMS VIIRS | optional (`FIRMS_MAP_KEY`); reports "unavailable" without a key |
+| AQI methodology | CPCB National AQI (2014) | sub-index breakpoints with linear interpolation |
+
+## 8. Setup and running
+
 ```bash
 # 1. Clone
-git clone <repo-url> && cd vayu
+git clone https://github.com/<your-username>/vayu.git
+cd vayu
 
-# 2. Environment
-python -m venv venv && .\venv\Scripts\activate   # Windows (Linux: source venv/bin/activate)
+# 2. Environment (Python 3.10+)
+python -m venv venv
+.\venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 
-# 3. Data (real CPCB download + Delhi slice)
+# 3. Data (real CPCB download -> Delhi slice; skipped if already present)
 python src/ingestion/download_cpcb_delhi.py
 
-# 4. Run the test suite (no network needed)
+# 4. Test suite (offline, no API keys needed)
 pytest tests/ -v
 
-# 5. Launch the console (fetches ERA5 weather once; caches it; works offline afterwards)
+# 5. Console (fetches ERA5 weather once, then caches; works offline)
 streamlit run app/streamlit_app.py
 ```
-Open `http://localhost:8501`. The engine computes features, NMF bootstrap, quantile models and explainability on first load, then caches them for the session.
 
-**Offline behaviour:** with no network, VAYU uses cached weather; without any cache it proceeds on CPCB's onboard met sensors and displays BLH as "unavailable" — honestly. Every UI panel shows its data provenance.
+Open `http://localhost:8501`. The engine computes features, the NMF bootstrap, quantile models and driver analysis on first load (one-time, cached for the session). **Offline behaviour:** with no network, VAYU uses the cached weather and proceeds on CPCB's onboard met sensors, displaying missing items as "unavailable" rather than estimating them.
 
----
+## 9. Limitations and intended use
 
-## 📊 5. Validation & Performance Benchmarks (measured, not asserted)
-Feature table: **169 hourly city-aggregate rows** (2025-12-24 → 2025-12-31 UTC, 40 stations). Chronological 75/25 split; metrics on the strictly later test block; persistence = "predict last observed PM2.5".
+- Attribution shares are statistical evidence about co-varying pollutants — **not** a measured emissions inventory and **not** causal proof.
+- The open CPCB mirror provides a ~one-week rolling window; a longer archive would strengthen multi-week validation (interval coverage is below nominal at this sample size — shown in the audit tab).
+- The policy simulator is a documented **first-order linear counterfactual** without secondary-aerosol chemistry.
+- All values are model estimates with stated uncertainty — not probabilities and not regulatory determinations.
+- Intended for situational awareness, prioritisation and planning support; confirmatory decisions require measurement campaigns.
 
-| Horizon | Model MAE | Persistence MAE | Beats baseline | R² | 80% interval coverage |
-|---|---|---|---|---|---|
-| +1h | **16.8 µg/m³** | 20.8 | ✅ | **0.865** | 0.33 |
-| +24h | **43.1 µg/m³** | 64.9 | ✅ | 0.225 | 0.30 |
-| +48h | 42.1 µg/m³ | 35.7 | ❌ persistence wins | 0.271 | 0.61 |
-| +72h | 40.9 µg/m³ | 38.9 | ❌ persistence wins | 0.292 | 0.48 |
+## 10. AI tools used
 
-**Honest reading of this run:** VAYU clearly beats persistence at nowcast (+1h) and day-ahead (+24h) ranges; at +48h/+72h on this short window persistence is competitive — we report that rather than hide it. Observed 80% interval coverage is below nominal (intervals too narrow on 7 days of data) and is displayed in the app's audit card. With ~25–42 out-of-time test points per horizon, these numbers are indicative, not definitive.
+Per hackathon rules: AI assistants were used for ideation, scaffolding and engineering support (**Antigravity by Google** for early prototyping; **OpenCode (GLM)** for pipeline engineering, testing, UI and documentation). All models are trained and evaluated on real open datasets; every metric in this README is reproducible via `pytest tests/ -v` and the app's Model audit tab.
 
-### Known limitations (stated up front)
-* The open CPCB mirror provides a ~7-day rolling snapshot; a longer archive would strengthen multi-week validation.
-* Source attribution shares come from receptor modelling of co-located pollutants — statistical evidence, **not** causal measurement.
-* The policy simulator is a documented **first-order linear counterfactual** (no secondary aerosol chemistry feedback).
-* Permutation importance is used instead of SHAP (the `shap` package does not yet support this Python build); this is labelled in the UI.
+## 11. Team
 
----
-
-## 🤖 6. AI Tools & Disclosures
-Per hackathon rules, AI assistants were used: **Antigravity (Google)** for early scaffolding and ideation, and **OpenCode (GLM)** for pipeline engineering, testing and this documentation. All models are trained and evaluated on real open datasets; every metric in this README is reproducible via `pytest tests/ -v` and the app's audit card.
+| | |
+|---|---|
+| **Team** | VAYU |
+| **Members** | Adya Sinha |
+| **Track** | Green Planet — GP-01: Air Quality Monitoring & Source Attribution |
+| **Live demo** | *(add Streamlit Community Cloud URL after deployment)* |
 
 ---
 
-## 👥 7. Team Information
-* **Team Name:** VAYU Core Team
-* **Track:** Green Planet (GP-01)
-* **Hackathon:** NEURAL STORM 2026
+<div align="center">
+<sub>VAYU · open data: CPCB CAAQMS, Open-Meteo ERA5, CPCB AQI methodology · estimates carry stated uncertainty and are subject to revision</sub>
+</div>
