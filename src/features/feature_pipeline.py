@@ -199,10 +199,10 @@ def chronological_split(sup: pd.DataFrame, target: str, train_frac: float = 0.75
 
 
 def load_and_build(weather_df: pd.DataFrame | None = None) -> tuple[pd.DataFrame, dict]:
-    """Convenience: load CPCB parquet, build features. Returns (features, meta)."""
-    if not CPCB_PARQUET.exists():
-        raise FileNotFoundError(f"CPCB parquet not found: {CPCB_PARQUET}. Run src/ingestion/download_cpcb_delhi.py first.")
-    raw = pd.read_parquet(CPCB_PARQUET)
+    """Convenience: load CPCB telemetry (local file or auto-bootstrapped), build features."""
+    from src.ingestion.cpcb_data import ensure_cpcb_dataframe
+
+    raw, _ = ensure_cpcb_dataframe()
     return build_features(raw, weather_df)
 
 

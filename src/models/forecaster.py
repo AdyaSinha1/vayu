@@ -23,7 +23,6 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src.features.feature_pipeline import (
-    CPCB_PARQUET,
     MODEL_FEATURES,
     chronological_split,
     load_and_build,
@@ -193,10 +192,11 @@ def run_pipeline(weather_df: pd.DataFrame | None = None) -> tuple[VAYUQuantileFo
     tracked in meta["weather_provenance"] and never blocks the pipeline.
     """
     if weather_df is None:
+        from src.ingestion.cpcb_data import ensure_cpcb_dataframe
         from src.ingestion.weather_loader import load_weather
 
         # Derive the weather window from the CPCB telemetry itself.
-        raw = pd.read_parquet(CPCB_PARQUET)
+        raw, _ = ensure_cpcb_dataframe()
         ts = pd.to_datetime(raw["Timestamp"], utc=True, errors="coerce").dropna()
         start = (ts.min() - pd.Timedelta(hours=2)).date()
         end = ts.max().date()

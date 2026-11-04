@@ -32,6 +32,7 @@ from src.attribution.receptor_nmf import get_attribution_summary  # noqa: E402
 from src.attribution.simulator import SOURCE_TO_LEVER, shares_to_intervention_keys, simulate_policy  # noqa: E402
 from src.features.aqi import POLLUTANT_LABELS, aqi_category, overall_aqi  # noqa: E402
 from src.features.feature_pipeline import build_features, clean_cpcb_columns  # noqa: E402
+from src.ingestion.cpcb_data import CPCBDataUnavailable
 from src.ingestion.weather_loader import load_weather  # noqa: E402
 from src.models.explainer import decoupling_verdict, explain_horizon  # noqa: E402
 from src.models.forecaster import VAYUQuantileForecaster  # noqa: E402
@@ -165,14 +166,16 @@ POLLUTANT_OPTIONS = {"PM2.5": "pm25", "PM10": "pm10", "NO2": "no2", "SO2": "so2"
 # ----------------- ENGINE (all live computation, cached once) -----------------
 @st.cache_resource(show_spinner="Computing: features, receptor model, forecast models, driver analysis ...")
 def run_engine() -> dict:
-    CPCB_PARQUET = BASE_DIR / "data" / "processed" / "delhi_cpcb_real.parquet"
-    raw = pd.read_parquet(CPCB_PARQUET)
+    from src.ingestion.cpcb_data import ensure_cpcb_dataframe
+
+    raw, cpcb_provenance = ensure_cpcb_dataframe()
 
     ts = pd.to_datetime(raw["Timestamp"], utc=True, errors="coerce").dropna()
     wdf, weather_status = load_weather(str((ts.min() - pd.Timedelta(hours=2)).date()), str(ts.max().date()))
 
     features, meta = build_features(raw, wdf if wdf is not None else None)
     meta["weather_fetch_status"] = weather_status
+    meta["cpcb_provenance"] = cpcb_provenance
 
     forecaster = VAYUQuantileForecaster()
     forecaster.fit(features)
@@ -245,7 +248,15 @@ def _base_layout(fig, height: int, ytitle: str | None = None, xtitle: str | None
     return fig
 
 
-engine = run_engine()
+try:
+    engine = run_engine()
+except CPCBDataUnavailable as exc:
+    st.error(
+        "**CPCB telemetry unavailable.** No local copy was found and the open mirror "
+        f"could not be reached ({exc}). VAYU never fabricates measurements - please retry, "
+        "or run `python src/ingestion/download_cpcb_delhi.py` with a network connection."
+    )
+    st.stop()
 features: pd.DataFrame = engine["features"]
 meta: dict = engine["meta"]
 forecaster: VAYUQuantileForecaster = engine["forecaster"]
@@ -273,7 +284,7 @@ with st.sidebar:
     st.markdown("**Data status**")
     st.markdown(
         f"<span style='font-size:0.75rem;color:{TEXT_2};'>"
-        f"Ground: CPCB CAAQMS, {len(engine['station_stats'])} stations<br/>"
+        f"Ground: CPCB CAAQMS, {len(engine['station_stats'])} stations ({meta['cpcb_provenance']})<br/>"
         f"Window: {meta['time_start'][:16]} - {meta['time_end'][:16]} UTC<br/>"
         f"Meteorology: {meta['weather_provenance']}<br/>"
         f"Receptor model: {attribution['n_samples']:,} samples</span>",

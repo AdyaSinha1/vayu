@@ -19,8 +19,7 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import NMF
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-PROCESSED_PARQUET = BASE_DIR / "data" / "processed" / "delhi_cpcb_real.parquet"
+from src.ingestion.cpcb_data import PROCESSED_PARQUET, ensure_cpcb_dataframe
 
 NMF_FEATURES = ["pm25", "pm10", "no2", "so2", "co", "ozone"]
 
@@ -239,7 +238,7 @@ def run_full_attribution(df_raw: pd.DataFrame, n_boot: int = 200) -> dict:
     return result
 
 
-ATTRIBUTION_CACHE = BASE_DIR / "data" / "processed" / "attribution_summary.json"
+ATTRIBUTION_CACHE = PROCESSED_PARQUET.parent / "attribution_summary.json"
 
 
 def _profiles_to_dict(profiles: pd.DataFrame) -> dict:
@@ -254,13 +253,16 @@ def get_attribution_summary(n_boot: int = 150, use_cache: bool = True) -> dict:
     """
     raw_path = Path(PROCESSED_PARQUET)
     if use_cache and ATTRIBUTION_CACHE.exists() and raw_path.exists():
-        if ATTRIBUTION_CACHE.stat().st_mtime > raw_path.stat().st_mtime:
+        # `>=` (not `>`): a fresh git checkout / cloud deploy gives every file the
+        # same mtime, so a strict `>` would invalidate the committed cache on every
+        # cold boot and force the full 150-refit bootstrap in a small container.
+        if ATTRIBUTION_CACHE.stat().st_mtime >= raw_path.stat().st_mtime:
             import json
 
             with open(ATTRIBUTION_CACHE, "r", encoding="utf-8") as fh:
                 return json.load(fh)
 
-    raw = pd.read_parquet(raw_path)
+    raw, _ = ensure_cpcb_dataframe()
     res = run_full_attribution(raw, n_boot=n_boot)
     summary = {
         "n_samples": res["n_samples"],
@@ -284,8 +286,8 @@ def get_attribution_summary(n_boot: int = 150, use_cache: bool = True) -> dict:
 
 
 if __name__ == "__main__":
-    raw = pd.read_parquet(PROCESSED_PARQUET)
-    print("Fitting receptor model on 100% real CPCB Delhi telemetry...")
+    raw, provenance = ensure_cpcb_dataframe()
+    print(f"Fitting receptor model on 100% real CPCB Delhi telemetry ({provenance})...")
     res = run_full_attribution(raw, n_boot=200)
     print(f"\nValid multi-pollutant samples: {res['n_samples']}")
     print(f"NMF reconstruction residual (rel. Frobenius): {res['reconstruction_residual']:.3f}")

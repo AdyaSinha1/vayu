@@ -160,7 +160,8 @@ python -m venv venv
 .\venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 
-# 3. Data (real CPCB download -> Delhi slice; skipped if already present)
+# 3. Data - optional locally: the console bootstraps the CPCB Delhi slice
+#    from the open mirror automatically when no local file exists
 python src/ingestion/download_cpcb_delhi.py
 
 # 4. Test suite (offline, no API keys needed)
@@ -171,6 +172,8 @@ streamlit run app/streamlit_app.py
 ```
 
 Open `http://localhost:8501`. The engine computes features, the NMF bootstrap, quantile models and driver analysis on first load (one-time, cached for the session). **Offline behaviour:** with no network, VAYU uses the cached weather and proceeds on CPCB's onboard met sensors, displaying missing items as "unavailable" rather than estimating them.
+
+**Cloud deploy:** no data files are committed to this repository (they are git-ignored), so the Streamlit Community Cloud app bootstraps the CPCB Delhi telemetry from the [open mirror](https://github.com/Vonter/india-cpcb-aqi) on first load and caches it for the session; data provenance is shown in the sidebar. If the mirror is unreachable, the app displays an honest "unavailable" message instead of estimating values.
 
 ## 9. Limitations and intended use
 
