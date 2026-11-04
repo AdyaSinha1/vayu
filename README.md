@@ -140,10 +140,13 @@ Engine code is separated from presentation: `src/ingestion` (data), `src/feature
 
 | Data | Source | Notes |
 |---|---|---|
-| Ground telemetry | CPCB CAAQMS via open mirror `Vonter/india-cpcb-aqi` | 26,895 records, 40 Delhi-NCR stations, 15-min cadence |
-| Meteorology | Open-Meteo ERA5 archive API | hourly BLH, winds, T/RH/pressure; local cache; provenance shown in UI |
-| Active fires | NASA FIRMS VIIRS | optional (`FIRMS_MAP_KEY`); reports "unavailable" without a key |
-| AQI methodology | CPCB National AQI (2014) | sub-index breakpoints with linear interpolation |
+| Ground telemetry | [CPCB CAAQMS](https://app.cpcb.gov.in/AQI_CAAQMS/) via the open mirror [Vonter/india-cpcb-aqi](https://github.com/Vonter/india-cpcb-aqi) (parquet fetched by `src/ingestion/download_cpcb_delhi.py`) | 26,895 records, 40 Delhi-NCR stations, 15-min cadence |
+| Meteorology | [Open-Meteo ERA5 archive API](https://open-meteo.com/en/docs/historical-weather-api) — upstream [ERA5 hourly reanalysis, ECMWF / Copernicus CDS](https://doi.org/10.24381/cds.adbb2d47) | hourly BLH, winds, T/RH/pressure; local cache; provenance shown in UI |
+| Active fires | [NASA FIRMS — VIIRS S-NPP near-real-time](https://firms.modaps.eosdis.nasa.gov/) | optional (`FIRMS_MAP_KEY`); reports "unavailable" without a key |
+| AQI methodology | [CPCB National AQI (2014)](https://app.cpcb.gov.in/AQI_CAAQMS/) expert-group breakpoints ([CPCB](https://cpcb.nic.in/)) | sub-index breakpoints with linear interpolation |
+
+All models (NMF attribution, quantile forecasting, driver separation) are trained **only** on the
+real open datasets above; the policy simulator is a documented model, not a data source.
 
 ## 8. Setup and running
 
