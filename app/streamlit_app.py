@@ -15,7 +15,9 @@ says so.
 
 from __future__ import annotations
 
+import json
 import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -128,44 +130,74 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# Station coordinates (Delhi-NCR CPCB network)
-STATION_COORDS = {
-    "Anand Vihar, Delhi - DPCC": (28.6469, 77.3160),
-    "RK Puram, Delhi - DPCC": (28.5637, 77.1867),
-    "Punjabi Bagh, Delhi - DPCC": (28.6740, 77.1310),
-    "ITO, Delhi - CPCB": (28.6318, 77.2405),
-    "Mandir Marg, Delhi - DPCC": (28.6364, 77.2010),
-    "Bawana, Delhi - DPCC": (28.7997, 77.0326),
-    "Alipur, Delhi - DPCC": (28.8153, 77.1530),
-    "Ashok Vihar, Delhi - DPCC": (28.6954, 77.1817),
-    "DTU, Delhi - CPCB": (28.7501, 77.1177),
-    "CRRI Mathura Road, Delhi - IMD": (28.5512, 77.2736),
-    "Chandni Chowk, Delhi - IITM": (28.6562, 77.2307),
-    "Dr. Karni Singh Shooting Range, Delhi - DPCC": (28.4986, 77.2648),
-    "Dwarka-Sector 8, Delhi - DPCC": (28.5710, 77.0719),
-    "Jahangirpuri, Delhi - DPCC": (28.7328, 77.1706),
-    "Jawaharlal Nehru Stadium, Delhi - DPCC": (28.5802, 77.2338),
-    "Major Dhyan Chand National Stadium, Delhi - DPCC": (28.6119, 77.2378),
-    "Najafgarh, Delhi - DPCC": (28.5701, 76.9337),
-    "Narela, Delhi - DPCC": (28.8526, 77.0924),
-    "Okhla Phase-2, Delhi - DPCC": (28.5308, 77.2713),
-    "Patparganj, Delhi - DPCC": (28.6237, 77.2872),
-    "Pusa, Delhi - DPCC": (28.6396, 77.1462),
-    "Rohini, Delhi - DPCC": (28.7325, 77.1199),
-    "Shadipur, Delhi - CPCB": (28.6515, 77.1581),
-    "Sirifort, Delhi - CPCB": (28.5504, 77.2159),
-    "Sonia Vihar, Delhi - DPCC": (28.7105, 77.2494),
-    "Sri Aurobindo Marg, Delhi - DPCC": (28.5313, 77.1901),
-    "Vivek Vihar, Delhi - DPCC": (28.6723, 77.3153),
-    "Wazirpur, Delhi - DPCC": (28.6998, 77.1654),
-}
-
-POLLUTANT_OPTIONS = {"PM2.5": "pm25", "PM10": "pm10", "NO2": "no2", "SO2": "so2", "CO": "co", "Ozone": "ozone"}
+# Station registry shared with scripts (single source of truth)
+from src.features.stations import POLLUTANT_OPTIONS, STATION_COORDS  # noqa: E402
 
 
-# ----------------- ENGINE (all live computation, cached once) -----------------
-@st.cache_resource(show_spinner="Computing: features, receptor model, forecast models, driver analysis ...")
+# ----------------- ENGINE -----------------
+# Fast path: precomputed artifacts (scripts/precompute.py) load in ~1 s.
+# Slow path: full live computation, used only when the cache is absent.
+def _engine_from_cache() -> dict:
+    from src.models.forecaster import HorizonResult
+
+    with open(BASE_DIR / "data" / "processed" / "engine_cache.json", "r", encoding="utf-8") as fh:
+        cache = json.load(fh)
+
+    features = pd.read_parquet(BASE_DIR / "data" / "processed" / "features_cache.parquet")
+    raw_cleaned = pd.read_parquet(BASE_DIR / "data" / "processed" / "stations_cleaned.parquet")
+    if not pd.api.types.is_datetime64_any_dtype(raw_cleaned["timestamp"]):
+        raw_cleaned["timestamp"] = pd.to_datetime(raw_cleaned["timestamp"], utc=True, errors="coerce")
+    cache["meta"].setdefault("cpcb_provenance", "committed CPCB parquet (precomputed)")
+
+    results: dict[int, HorizonResult] = {}
+    for key, r in cache["results"].items():
+        preds = None
+        if r["predictions"] is not None:
+            preds = pd.DataFrame(r["predictions"])
+            preds["timestamp"] = pd.to_datetime(preds["timestamp"], utc=True, errors="coerce")
+        split_time = pd.Timestamp(r["split_time"]) if r["split_time"] else None
+        results[int(key)] = HorizonResult(
+            horizon=r["horizon"],
+            trained=r["trained"],
+            reason=r["reason"],
+            split_time=split_time,
+            n_train=r["n_train"],
+            n_test=r["n_test"],
+            metrics=r["metrics"],
+            predictions=preds,
+        )
+
+    def _expl(ex: dict) -> dict:
+        if "error" in ex:
+            return ex
+        out = dict(ex)
+        out["feature_importance"] = pd.DataFrame(ex["feature_importance"])
+        return out
+
+    latest = {int(h): q for h, q in cache["latest_forecast"].items()}
+    return {
+        "features": features,
+        "meta": cache["meta"],
+        "forecaster": types.SimpleNamespace(results=results),
+        "latest_forecast": latest,
+        "explainer_24": _expl(cache["explainer_24"]),
+        "explainer_1": _expl(cache["explainer_1"]),
+        "attribution": cache["attribution"],
+        "station_stats": cache["station_stats"],
+        "raw_cleaned": raw_cleaned,
+        "from_cache": True,
+    }
+
+
+@st.cache_resource(show_spinner="Loading VAYU engine ...")
 def run_engine() -> dict:
+    cache_path = BASE_DIR / "data" / "processed" / "engine_cache.json"
+    if cache_path.exists():
+        try:
+            return _engine_from_cache()
+        except Exception:  # malformed cache -> fall through to full compute
+            pass
+
     from src.ingestion.cpcb_data import ensure_cpcb_dataframe
 
     raw, cpcb_provenance = ensure_cpcb_dataframe()
